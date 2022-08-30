@@ -273,13 +273,34 @@ fn predicate_combinator() {
 }
 
 fn whitespace_char<'a>() -> impl Parser<'a, char> {
-	pred(any_char, |c| c.is_whitespace())
+    pred(any_char, |c| c.is_whitespace())
 }
 
 fn space1<'a>() -> impl Parser<'a, Vec<char>> {
-	one_or_more(whitespace_char())
+    one_or_more(whitespace_char())
 }
 
 fn space0<'a>() -> impl Parser<'a, Vec<char>> {
-	zero_or_more(whitespace_char())
+    zero_or_more(whitespace_char())
+}
+
+fn quoted_string<'a>() -> impl Parser<'a, String> {
+    map(
+        right(
+            match_literal("\""),
+            left(
+                zero_or_more(pred(any_char, |c| *c != '"')),
+                match_literal("\""),
+            ),
+        ),
+        |chars| chars.into_iter().collect(),
+    )
+}
+
+#[test]
+fn quoted_string_parser() {
+    assert_eq!(
+        Ok(("", "value".to_string())),
+        quoted_string().parse("\"value\"")
+    );
 }
