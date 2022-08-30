@@ -27,11 +27,33 @@ fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), 
 	}
 }
 
+// answer to Exercise 1
+//
+// see https://doc.rust-lang.org/std/primitive.str.html#method.strip_prefix
+
+fn match_literal_improved(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), &str> {
+	move |input| match input.strip_prefix(expected) {
+		Some(next) => Ok((next, ())),
+		None => Err(input),
+	}
+}
+
 #[test]
 fn literal_parser() {
 	let parse = match_literal("abra");
 	assert_eq!(Ok(("", ())), parse("abra"));
 	assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
 	assert_eq!(Err(""), parse(""));
+	assert_eq!(Err("abc"), parse("abc"));
+	assert_eq!(Err("pikachu"), parse("pikachu"));
+}
+
+#[test]
+fn literal_parser_improved() {
+	let parse = match_literal_improved("abra");
+	assert_eq!(Ok(("", ())), parse("abra"));
+	assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
+	assert_eq!(Err(""), parse(""));
+	assert_eq!(Err("abc"), parse("abc"));
 	assert_eq!(Err("pikachu"), parse("pikachu"));
 }
