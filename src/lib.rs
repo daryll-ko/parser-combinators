@@ -80,3 +80,12 @@ fn identifier(input: &str) -> Result<(&str, String), &str> {
 	let next_index = matched.len();
 	Ok((&input[next_index..], matched))
 }
+
+// we need `.to_string()` since string literals are just slices
+
+#[test]
+fn identifier_parser() {
+	assert_eq!(Ok(("", "a-b-c-d".to_string())), identifier("a-b-c-d"));
+	assert_eq!(Ok((" b-c-d", "a".to_string())), identifier("a b-c-d"));
+	assert_eq!(Err("!a-b-c-d"), identifier("!a-b-c-d"));
+}
