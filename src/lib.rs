@@ -392,3 +392,25 @@ fn single_element_parser() {
     )
 }
 
+fn open_element<'a>() -> impl Parser<'a, Element> {
+    left(element_start(), match_literal(">")).map(|(name, attributes)| Element {
+        name,
+        attributes,
+        children: vec![],
+    })
+}
+
+fn either<'a, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<'a, A>
+where
+    P1: Parser<'a, A>,
+    P2: Parser<'a, A>,
+{
+    move |input| match parser1.parse(input) {
+        ok @ Ok(_) => ok,
+        Err(_) => parser2.parse(input),
+    }
+}
+
+fn element<'a>() -> impl Parser<'a, Element> {
+    either(single_element(), open_element())
+}
