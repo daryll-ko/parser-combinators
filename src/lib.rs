@@ -20,6 +20,27 @@ where
     }
 }
 
+struct BoxedParser<'a, Output> {
+    parser: Box<dyn Parser<'a, Output> + 'a>,
+}
+
+impl<'a, Output> BoxedParser<'a, Output> {
+    fn new<P>(parser: P) -> Self
+    where
+        P: Parser<'a, Output> + 'a,
+    {
+        BoxedParser {
+            parser: Box::new(parser),
+        }
+    }
+}
+
+impl<'a, Output> Parser<'a, Output> for BoxedParser<'a, Output> {
+	fn parse(&self, input: &'a str) -> ParseResult<'a, Output> {
+		self.parser.parse(input)
+	}
+}
+
 // this is what match_literal("a") essentially returns
 
 fn the_letter_a(input: &str) -> ParseResult<()> {
@@ -344,15 +365,15 @@ fn single_element<'a>() -> impl Parser<'a, Element> {
 
 #[test]
 fn single_element_parser() {
-	assert_eq!(
-		Ok((
-			"",
-			Element {
-				name: "div".to_string(),
-				attributes: vec![("class".to_string(), "container".to_string())],
-				children: vec![],
-			}
-		)),
-		single_element().parse("<div class=\"container\"/>")
-	)
+    assert_eq!(
+        Ok((
+            "",
+            Element {
+                name: "div".to_string(),
+                attributes: vec![("class".to_string(), "container".to_string())],
+                children: vec![],
+            }
+        )),
+        single_element().parse("<div class=\"container\"/>")
+    )
 }
