@@ -57,3 +57,26 @@ fn literal_parser_improved() {
 	assert_eq!(Err("abc"), parse("abc"));
 	assert_eq!(Err("pikachu"), parse("pikachu"));
 }
+
+// matches the regex [a-zA-Z]([a-zA-Z0-9]|-)*
+
+fn identifier(input: &str) -> Result<(&str, String), &str> {
+	let mut matched = String::new();
+	let mut chars = input.chars();
+
+	match chars.next() {
+		Some(next) if next.is_alphabetic() => matched.push(next),
+		_ => return Err(input),
+	}
+
+	while let Some(next) = chars.next() {
+		if next.is_alphanumeric() || next == '-' {
+			matched.push(next);
+		} else {
+			break;
+		}
+	}
+
+	let next_index = matched.len();
+	Ok((&input[next_index..], matched))
+}
