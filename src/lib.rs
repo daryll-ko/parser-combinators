@@ -1,11 +1,24 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Element {
-	name: String,
+    name: String,
     attributes: Vec<(String, String)>,
     children: Vec<Element>,
 }
 
 type ParseResult<'a, Output> = Result<(&'a str, Output), &'a str>;
+
+trait Parser<'a, Output> {
+    fn parse(&self, input: &'a str) -> ParseResult<'a, Output>;
+}
+
+impl<'a, F, Output> Parser<'a, Output> for F
+where
+    F: Fn(&'a str) -> ParseResult<Output>,
+{
+    fn parse(&self, input: &'a str) -> ParseResult<'a, Output> {
+        self(input)
+    }
+}
 
 // this is what match_literal("a") essentially returns
 
@@ -94,17 +107,17 @@ fn identifier_parser() {
 
 // given f and g, returns (f o g)
 
-fn pair<P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Fn(&str) -> ParseResult<(R1, R2)>
+fn pair<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, (R1, R2)>
 where
-    P1: Fn(&str) -> ParseResult<R1>,
-    P2: Fn(&str) -> ParseResult<R2>,
+    P1: Parser<'a, R1>,
+    P2: Parser<'a, R2>,
 {
-    move |input| match parser1(input) {
-        Ok((next_input, result1)) => match parser2(next_input) {
-            Ok((final_input, result2)) => Ok((final_input, (result1, result2))),
-            Err(err) => Err(err),
-        },
-        Err(err) => Err(err),
+    move |input| {
+        parser1.parse(input).and_then(|(next_input, result1)| {
+            parser2
+                .parse(next_input)
+                .map(|(last_input, result2)| (last_input, (result1, result2)))
+        })
     }
 }
 
@@ -113,18 +126,41 @@ where
 #[test]
 fn pair_combinator() {
     let tag_opener = pair(match_literal("<"), identifier);
-    assert_eq!(Ok(("/>", ((), "br".to_string()))), tag_opener("<br/>"));
-    assert_eq!(Err("oh no"), tag_opener("oh no"));
+    assert_eq!(
+        Ok(("/>", ((), "br".to_string()))),
+        tag_opener.parse("<br/>")
+    );
+    assert_eq!(Err("oh no"), tag_opener.parse("oh no"));
     assert_eq!(
         Err("!-- I'm just a comment! -->"),
-        tag_opener("<!-- I'm just a comment! -->")
+        tag_opener.parse("<!-- I'm just a comment! -->")
     );
 }
 
-fn map<P, F, A, B>(parser: P, map_fn: F) -> impl Fn(&str) -> ParseResult<B>
+fn map<'a, P, F, A, B>(parser: P, map_fn: F) -> impl Parser<'a, B>
 where
-    P: Fn(&str) -> ParseResult<A>,
+    P: Parser<'a, A>,
     F: Fn(A) -> B,
 {
-    move |input| parser(input).map(|(next_input, result)| (next_input, map_fn(result)))
+    move |input| {
+        parser
+            .parse(input)
+            .map(|(next_input, result)| (next_input, map_fn(result)))
+    }
+}
+
+fn left<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R1>
+where
+	P1: Parser<'a, R1>,
+	P2: Parser<'a, R2>,
+{
+	map(pair(parser1, parser2), |(left, _right)| left)
+}
+
+fn right<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R2>
+where
+	P1: Parser<'a, R1>,
+	P2: Parser<'a, R2>,
+{
+	map(pair(parser1, parser2), |(_left, right)| right)
 }
