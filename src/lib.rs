@@ -35,8 +35,8 @@ fn the_letter_a(input: &str) -> ParseResult<()> {
 //
 // ironically, the variability of `expected` makes length extraction nicer to look at!
 
-fn match_literal(expected: &'static str) -> impl Fn(&str) -> ParseResult<()> {
-    move |input| match input.get(0..expected.len()) {
+fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
+    move |input: &'a str| match input.get(0..expected.len()) {
         Some(next) if next == expected => Ok((&input[expected.len()..], ())),
         _ => Err(input),
     }
@@ -46,8 +46,8 @@ fn match_literal(expected: &'static str) -> impl Fn(&str) -> ParseResult<()> {
 //
 // see https://doc.rust-lang.org/std/primitive.str.html#method.strip_prefix
 
-fn match_literal_improved(expected: &'static str) -> impl Fn(&str) -> ParseResult<()> {
-    move |input| match input.strip_prefix(expected) {
+fn match_literal_improved<'a>(expected: &'static str) -> impl Parser<'a, ()> {
+    move |input: &'a str| match input.strip_prefix(expected) {
         Some(next) => Ok((next, ())),
         None => Err(input),
     }
@@ -55,22 +55,22 @@ fn match_literal_improved(expected: &'static str) -> impl Fn(&str) -> ParseResul
 
 #[test]
 fn literal_parser() {
-    let parse = match_literal("abra");
-    assert_eq!(Ok(("", ())), parse("abra"));
-    assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
-    assert_eq!(Err(""), parse(""));
-    assert_eq!(Err("abc"), parse("abc"));
-    assert_eq!(Err("pikachu"), parse("pikachu"));
+    let parser = match_literal("abra");
+    assert_eq!(Ok(("", ())), parser.parse("abra"));
+    assert_eq!(Ok(("kadabraalakazam", ())), parser.parse("abrakadabraalakazam"));
+    assert_eq!(Err(""), parser.parse(""));
+    assert_eq!(Err("abc"), parser.parse("abc"));
+    assert_eq!(Err("pikachu"), parser.parse("pikachu"));
 }
 
 #[test]
 fn literal_parser_improved() {
-    let parse = match_literal_improved("abra");
-    assert_eq!(Ok(("", ())), parse("abra"));
-    assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
-    assert_eq!(Err(""), parse(""));
-    assert_eq!(Err("abc"), parse("abc"));
-    assert_eq!(Err("pikachu"), parse("pikachu"));
+    let parser = match_literal_improved("abra");
+    assert_eq!(Ok(("", ())), parser.parse("abra"));
+    assert_eq!(Ok(("kadabraalakazam", ())), parser.parse("abrakadabraalakazam"));
+    assert_eq!(Err(""), parser.parse(""));
+    assert_eq!(Err("abc"), parser.parse("abc"));
+    assert_eq!(Err("pikachu"), parser.parse("pikachu"));
 }
 
 // matches the regex [a-zA-Z]([a-zA-Z0-9]|-)*
