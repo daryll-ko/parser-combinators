@@ -184,55 +184,90 @@ fn right_combinator() {
 
 fn one_or_more<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
 where
-	P: Parser<'a, A>,
+    P: Parser<'a, A>,
 {
-	move |mut input| {
-		let mut result = Vec::new();
+    move |mut input| {
+        let mut result = Vec::new();
 
-		if let Ok((next_input, first_item)) = parser.parse(input) {
-			input = next_input;
-			result.push(first_item);
-		} else {
-			return Err(input);
-		}
+        if let Ok((next_input, first_item)) = parser.parse(input) {
+            input = next_input;
+            result.push(first_item);
+        } else {
+            return Err(input);
+        }
 
-		while let Ok((next_input, next_item)) = parser.parse(input) {
-			input = next_input;
-			result.push(next_item);
-		}
+        while let Ok((next_input, next_item)) = parser.parse(input) {
+            input = next_input;
+            result.push(next_item);
+        }
 
-		Ok((input, result))
-	}
+        Ok((input, result))
+    }
 }
 
 fn zero_or_more<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
 where
-	P: Parser<'a, A>,
+    P: Parser<'a, A>,
 {
-	move |mut input| {
-		let mut result = Vec::new();
+    move |mut input| {
+        let mut result = Vec::new();
 
-		while let Ok((next_input, next_item)) = parser.parse(input) {
-			input = next_input;
-			result.push(next_item);
-		}
+        while let Ok((next_input, next_item)) = parser.parse(input) {
+            input = next_input;
+            result.push(next_item);
+        }
 
-		Ok((input, result))
-	}
+        Ok((input, result))
+    }
 }
 
 #[test]
 fn one_or_more_combinator() {
-	let parser = one_or_more(match_literal("le"));
-	assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
-	assert_eq!(Err("delelelelelewhooop"), parser.parse("delelelelelewhooop"));
-	assert_eq!(Err(""), parser.parse(""));
+    let parser = one_or_more(match_literal("le"));
+    assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
+    assert_eq!(
+        Err("delelelelelewhooop"),
+        parser.parse("delelelelelewhooop")
+    );
+    assert_eq!(Err(""), parser.parse(""));
 }
 
 #[test]
 fn zero_or_more_combinator() {
-	let parser = zero_or_more(match_literal("le"));
-	assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
-	assert_eq!(Ok(("delelelelelewhooop", vec![])), parser.parse("delelelelelewhooop"));
-	assert_eq!(Ok(("", vec![])), parser.parse(""));
+    let parser = zero_or_more(match_literal("le"));
+    assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
+    assert_eq!(
+        Ok(("delelelelelewhooop", vec![])),
+        parser.parse("delelelelelewhooop")
+    );
+    assert_eq!(Ok(("", vec![])), parser.parse(""));
+}
+
+fn any_char(input: &str) -> ParseResult<char> {
+    match input.chars().next() {
+        Some(next) => Ok((&input[next.len_utf8()..], next)),
+        _ => Err(input),
+    }
+}
+
+fn pred<'a, P, A, F>(parser: P, predicate: F) -> impl Parser<'a, A>
+where
+    P: Parser<'a, A>,
+    F: Fn(&A) -> bool,
+{
+    move |input| {
+        if let Ok((next_input, value)) = parser.parse(input) {
+            if predicate(&value) {
+                return Ok((next_input, value));
+            }
+        }
+        Err(input)
+    }
+}
+
+#[test]
+fn predicate_combinator() {
+    let parser = pred(any_char, |c| *c == 'o');
+    assert_eq!(Ok(("ctazooka", 'o')), parser.parse("octazooka"));
+    assert_eq!(Err("bazooka"), parser.parse("bazooka"));
 }
