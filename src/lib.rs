@@ -1,22 +1,13 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Element {
-    name: String,
+	name: String,
     attributes: Vec<(String, String)>,
     children: Vec<Element>,
 }
 
 fn the_letter_a(input: &str) -> Result<(&str, ()), &str> {
     match input.chars().next() {
-        Some('a') => Ok((&input['a'.len_utf8()..], ())),
+		Some('a') => Ok((&input['a'.len_utf8()..], ())),
         _ => Err(input),
     }
 }
@@ -32,4 +23,13 @@ fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), 
 		Some (next) if next == expected => Ok((&input[expected.len()..], ())),
 		_ => Err(input),
 	}
+}
+
+#[test]
+fn literal_parser() {
+	let parse = match_literal("abra");
+	assert_eq!(Ok(("", ())), parse("abra"));
+	assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
+	assert_eq!(Err(""), parse(""));
+	assert_eq!(Err("pikachu"), parse("pikachu"));
 }
