@@ -214,6 +214,17 @@ where
     map(pair(parser1, parser2), |(left, _right)| left)
 }
 
+#[test]
+fn left_combinator() {
+    let tag_closer = left(identifier, match_literal("/>"));
+    assert_eq!(Ok(("", "br".to_string())), tag_closer.parse("br/>"));
+    assert_eq!(Err(" no"), tag_closer.parse("oh no"));
+    assert_eq!(
+        Err("<!-- I'm just a comment! -->"),
+        tag_closer.parse("<!-- I'm just a comment! -->")
+    );
+}
+
 fn right<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R2>
 where
     P1: Parser<'a, R1>,
@@ -258,13 +269,13 @@ where
 
 #[test]
 fn one_or_more_combinator() {
-	let parser = one_or_more(match_literal("le"));
-	assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
-	assert_eq!(
-		Err("delelelelelewhooop"),
-		parser.parse("delelelelelewhooop")
-	);
-	assert_eq!(Err(""), parser.parse(""));
+    let parser = one_or_more(match_literal("le"));
+    assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
+    assert_eq!(
+        Err("delelelelelewhooop"),
+        parser.parse("delelelelelewhooop")
+    );
+    assert_eq!(Err(""), parser.parse(""));
 }
 
 fn zero_or_more<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
