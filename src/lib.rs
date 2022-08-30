@@ -93,7 +93,7 @@ fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
     }
 }
 
-// answer to Exercise 1
+// answer to exercise
 //
 // see https://doc.rust-lang.org/std/primitive.str.html#method.strip_prefix
 
@@ -469,8 +469,7 @@ fn xml_parser() {
 			<div>
 				<button class="start" onclick="click()"></button>
 			</div>
-		</div>
-	"#;
+		</div>"#;
     let parsed_doc = Element {
         name: "div".to_string(),
         attributes: vec![("class".to_string(), "wrapper".to_string())],
@@ -500,4 +499,13 @@ fn xml_parser() {
         ],
     };
     assert_eq!(Ok(("", parsed_doc)), element().parse(doc));
+}
+
+#[test]
+fn oh_no() {
+    let doc = r#"
+		<div>
+			<html/>
+		</span>"#;
+    assert_eq!(Err("</span>"), element().parse(doc));
 }
