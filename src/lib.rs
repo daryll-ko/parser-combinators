@@ -422,8 +422,15 @@ where
     }
 }
 
+fn whitespace_wrap<'a, P, A>(parser: P) -> impl Parser<'a, A>
+where
+    P: Parser<'a, A>,
+{
+    right(space0(), left(parser, space0()))
+}
+
 fn element<'a>() -> impl Parser<'a, Element> {
-    either(single_element(), parent_element())
+    whitespace_wrap(either(single_element(), parent_element()))
 }
 
 fn close_element<'a>(expected_name: String) -> impl Parser<'a, String> {
@@ -451,4 +458,46 @@ where
         Ok((next_input, result)) => f(result).parse(next_input),
         Err(err) => Err(err),
     }
+}
+
+#[test]
+fn xml_parser() {
+    let doc = r#"
+		<div class="wrapper">
+			<p id="intro"></p>
+			<br/>
+			<div>
+				<button class="start" onclick="click()"></button>
+			</div>
+		</div>
+	"#;
+    let parsed_doc = Element {
+        name: "div".to_string(),
+        attributes: vec![("class".to_string(), "wrapper".to_string())],
+        children: vec![
+            Element {
+                name: "p".to_string(),
+                attributes: vec![("id".to_string(), "intro".to_string())],
+                children: vec![],
+            },
+            Element {
+                name: "br".to_string(),
+                attributes: vec![],
+                children: vec![],
+            },
+            Element {
+                name: "div".to_string(),
+                attributes: vec![],
+                children: vec![Element {
+                    name: "button".to_string(),
+                    attributes: vec![
+                        ("class".to_string(), "start".to_string()),
+                        ("onclick".to_string(), "click()".to_string()),
+                    ],
+                    children: vec![],
+                }],
+            },
+        ],
+    };
+    assert_eq!(Ok(("", parsed_doc)), element().parse(doc));
 }
