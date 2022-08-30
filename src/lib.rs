@@ -1,13 +1,15 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Element {
-    name: String,
+	name: String,
     attributes: Vec<(String, String)>,
     children: Vec<Element>,
 }
 
+type ParseResult<'a, Output> = Result<(&'a str, Output), &'a str>;
+
 // this is what match_literal("a") essentially returns
 
-fn the_letter_a(input: &str) -> Result<(&str, ()), &str> {
+fn the_letter_a(input: &str) -> ParseResult<()> {
     match input.chars().next() {
         Some('a') => Ok((&input['a'.len_utf8()..], ())),
         _ => Err(input),
@@ -20,7 +22,7 @@ fn the_letter_a(input: &str) -> Result<(&str, ()), &str> {
 //
 // ironically, the variability of `expected` makes length extraction nicer to look at!
 
-fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), &str> {
+fn match_literal(expected: &'static str) -> impl Fn(&str) -> ParseResult<()> {
     move |input| match input.get(0..expected.len()) {
         Some(next) if next == expected => Ok((&input[expected.len()..], ())),
         _ => Err(input),
@@ -31,7 +33,7 @@ fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), 
 //
 // see https://doc.rust-lang.org/std/primitive.str.html#method.strip_prefix
 
-fn match_literal_improved(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), &str> {
+fn match_literal_improved(expected: &'static str) -> impl Fn(&str) -> ParseResult<()> {
     move |input| match input.strip_prefix(expected) {
         Some(next) => Ok((next, ())),
         None => Err(input),
@@ -60,7 +62,7 @@ fn literal_parser_improved() {
 
 // matches the regex [a-zA-Z]([a-zA-Z0-9]|-)*
 
-fn identifier(input: &str) -> Result<(&str, String), &str> {
+fn identifier(input: &str) -> ParseResult<String> {
     let mut matched = String::new();
     let mut chars = input.chars();
 
@@ -92,10 +94,10 @@ fn identifier_parser() {
 
 // given f and g, returns (f o g)
 
-fn pair<P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Fn(&str) -> Result<(&str, (R1, R2)), &str>
+fn pair<P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Fn(&str) -> ParseResult<(R1, R2)>
 where
-    P1: Fn(&str) -> Result<(&str, R1), &str>,
-    P2: Fn(&str) -> Result<(&str, R2), &str>,
+    P1: Fn(&str) -> ParseResult<R1>,
+    P2: Fn(&str) -> ParseResult<R2>,
 {
     move |input| match parser1(input) {
         Ok((next_input, result1)) => match parser2(next_input) {
@@ -119,9 +121,9 @@ fn pair_combinator() {
     );
 }
 
-fn map<P, F, A, B>(parser: P, map_fn: F) -> impl Fn(&str) -> Result<(&str, B), &str>
+fn map<P, F, A, B>(parser: P, map_fn: F) -> impl Fn(&str) -> ParseResult<B>
 where
-    P: Fn(&str) -> Result<(&str, A), &str>,
+    P: Fn(&str) -> ParseResult<A>,
     F: Fn(A) -> B,
 {
     move |input| parser(input).map(|(next_input, result)| (next_input, map_fn(result)))
