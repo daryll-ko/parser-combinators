@@ -412,5 +412,17 @@ where
 }
 
 fn element<'a>() -> impl Parser<'a, Element> {
-    either(single_element(), open_element())
+    either(single_element(), parent_element())
+}
+
+fn close_element<'a>(expected_name: String) -> impl Parser<'a, String> {
+    right(match_literal("</"), left(identifier, match_literal(">")))
+        .pred(move |name| name == &expected_name)
+}
+
+fn parent_element<'a>() -> impl Parser<'a, Element> {
+	pair(
+		open_element(),
+		left(zero_or_more(element()), close_element(...oops))
+	)
 }
