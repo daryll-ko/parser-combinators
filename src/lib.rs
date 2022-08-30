@@ -256,6 +256,17 @@ where
     }
 }
 
+#[test]
+fn one_or_more_combinator() {
+	let parser = one_or_more(match_literal("le"));
+	assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
+	assert_eq!(
+		Err("delelelelelewhooop"),
+		parser.parse("delelelelelewhooop")
+	);
+	assert_eq!(Err(""), parser.parse(""));
+}
+
 fn zero_or_more<'a, P, A>(parser: P) -> impl Parser<'a, Vec<A>>
 where
     P: Parser<'a, A>,
@@ -270,17 +281,6 @@ where
 
         Ok((input, result))
     }
-}
-
-#[test]
-fn one_or_more_combinator() {
-    let parser = one_or_more(match_literal("le"));
-    assert_eq!(Ok(("", vec![(), (), ()])), parser.parse("lelele"));
-    assert_eq!(
-        Err("delelelelelewhooop"),
-        parser.parse("delelelelelewhooop")
-    );
-    assert_eq!(Err(""), parser.parse(""));
 }
 
 #[test]
