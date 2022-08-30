@@ -271,3 +271,15 @@ fn predicate_combinator() {
     assert_eq!(Ok(("ctazooka", 'o')), parser.parse("octazooka"));
     assert_eq!(Err("bazooka"), parser.parse("bazooka"));
 }
+
+fn whitespace_char<'a>() -> impl Parser<'a, char> {
+	pred(any_char, |c| c.is_whitespace())
+}
+
+fn space1<'a>() -> impl Parser<'a, Vec<char>> {
+	one_or_more(whitespace_char())
+}
+
+fn space0<'a>() -> impl Parser<'a, Vec<char>> {
+	zero_or_more(whitespace_char())
+}
