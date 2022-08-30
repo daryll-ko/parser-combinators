@@ -57,7 +57,10 @@ fn match_literal_improved<'a>(expected: &'static str) -> impl Parser<'a, ()> {
 fn literal_parser() {
     let parser = match_literal("abra");
     assert_eq!(Ok(("", ())), parser.parse("abra"));
-    assert_eq!(Ok(("kadabraalakazam", ())), parser.parse("abrakadabraalakazam"));
+    assert_eq!(
+        Ok(("kadabraalakazam", ())),
+        parser.parse("abrakadabraalakazam")
+    );
     assert_eq!(Err(""), parser.parse(""));
     assert_eq!(Err("abc"), parser.parse("abc"));
     assert_eq!(Err("pikachu"), parser.parse("pikachu"));
@@ -67,7 +70,10 @@ fn literal_parser() {
 fn literal_parser_improved() {
     let parser = match_literal_improved("abra");
     assert_eq!(Ok(("", ())), parser.parse("abra"));
-    assert_eq!(Ok(("kadabraalakazam", ())), parser.parse("abrakadabraalakazam"));
+    assert_eq!(
+        Ok(("kadabraalakazam", ())),
+        parser.parse("abrakadabraalakazam")
+    );
     assert_eq!(Err(""), parser.parse(""));
     assert_eq!(Err("abc"), parser.parse("abc"));
     assert_eq!(Err("pikachu"), parser.parse("pikachu"));
@@ -151,16 +157,27 @@ where
 
 fn left<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R1>
 where
-	P1: Parser<'a, R1>,
-	P2: Parser<'a, R2>,
+    P1: Parser<'a, R1>,
+    P2: Parser<'a, R2>,
 {
-	map(pair(parser1, parser2), |(left, _right)| left)
+    map(pair(parser1, parser2), |(left, _right)| left)
 }
 
 fn right<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R2>
 where
-	P1: Parser<'a, R1>,
-	P2: Parser<'a, R2>,
+    P1: Parser<'a, R1>,
+    P2: Parser<'a, R2>,
 {
-	map(pair(parser1, parser2), |(_left, right)| right)
+    map(pair(parser1, parser2), |(_left, right)| right)
+}
+
+#[test]
+fn right_combinator() {
+    let tag_opener = right(match_literal("<"), identifier);
+    assert_eq!(Ok(("/>", "br".to_string())), tag_opener.parse("<br/>"));
+    assert_eq!(Err("oh no"), tag_opener.parse("oh no"));
+    assert_eq!(
+        Err("!-- I'm just a comment! -->"),
+        tag_opener.parse("<!-- I'm just a comment! -->")
+    );
 }
