@@ -1,6 +1,6 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Element {
-	name: String,
+    name: String,
     attributes: Vec<(String, String)>,
     children: Vec<Element>,
 }
@@ -9,7 +9,7 @@ struct Element {
 
 fn the_letter_a(input: &str) -> Result<(&str, ()), &str> {
     match input.chars().next() {
-		Some('a') => Ok((&input['a'.len_utf8()..], ())),
+        Some('a') => Ok((&input['a'.len_utf8()..], ())),
         _ => Err(input),
     }
 }
@@ -21,10 +21,10 @@ fn the_letter_a(input: &str) -> Result<(&str, ()), &str> {
 // ironically, the variability of `expected` makes length extraction nicer to look at!
 
 fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), &str> {
-	move |input| match input.get(0..expected.len()) {
-		Some (next) if next == expected => Ok((&input[expected.len()..], ())),
-		_ => Err(input),
-	}
+    move |input| match input.get(0..expected.len()) {
+        Some(next) if next == expected => Ok((&input[expected.len()..], ())),
+        _ => Err(input),
+    }
 }
 
 // answer to Exercise 1
@@ -32,60 +32,86 @@ fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), 
 // see https://doc.rust-lang.org/std/primitive.str.html#method.strip_prefix
 
 fn match_literal_improved(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), &str> {
-	move |input| match input.strip_prefix(expected) {
-		Some(next) => Ok((next, ())),
-		None => Err(input),
-	}
+    move |input| match input.strip_prefix(expected) {
+        Some(next) => Ok((next, ())),
+        None => Err(input),
+    }
 }
 
 #[test]
 fn literal_parser() {
-	let parse = match_literal("abra");
-	assert_eq!(Ok(("", ())), parse("abra"));
-	assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
-	assert_eq!(Err(""), parse(""));
-	assert_eq!(Err("abc"), parse("abc"));
-	assert_eq!(Err("pikachu"), parse("pikachu"));
+    let parse = match_literal("abra");
+    assert_eq!(Ok(("", ())), parse("abra"));
+    assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
+    assert_eq!(Err(""), parse(""));
+    assert_eq!(Err("abc"), parse("abc"));
+    assert_eq!(Err("pikachu"), parse("pikachu"));
 }
 
 #[test]
 fn literal_parser_improved() {
-	let parse = match_literal_improved("abra");
-	assert_eq!(Ok(("", ())), parse("abra"));
-	assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
-	assert_eq!(Err(""), parse(""));
-	assert_eq!(Err("abc"), parse("abc"));
-	assert_eq!(Err("pikachu"), parse("pikachu"));
+    let parse = match_literal_improved("abra");
+    assert_eq!(Ok(("", ())), parse("abra"));
+    assert_eq!(Ok(("kadabraalakazam", ())), parse("abrakadabraalakazam"));
+    assert_eq!(Err(""), parse(""));
+    assert_eq!(Err("abc"), parse("abc"));
+    assert_eq!(Err("pikachu"), parse("pikachu"));
 }
 
 // matches the regex [a-zA-Z]([a-zA-Z0-9]|-)*
 
 fn identifier(input: &str) -> Result<(&str, String), &str> {
-	let mut matched = String::new();
-	let mut chars = input.chars();
+    let mut matched = String::new();
+    let mut chars = input.chars();
 
-	match chars.next() {
-		Some(next) if next.is_alphabetic() => matched.push(next),
-		_ => return Err(input),
-	}
+    match chars.next() {
+        Some(next) if next.is_alphabetic() => matched.push(next),
+        _ => return Err(input),
+    }
 
-	while let Some(next) = chars.next() {
-		if next.is_alphanumeric() || next == '-' {
-			matched.push(next);
-		} else {
-			break;
-		}
-	}
+    while let Some(next) = chars.next() {
+        if next.is_alphanumeric() || next == '-' {
+            matched.push(next);
+        } else {
+            break;
+        }
+    }
 
-	let next_index = matched.len();
-	Ok((&input[next_index..], matched))
+    let next_index = matched.len();
+    Ok((&input[next_index..], matched))
 }
 
 // we need `.to_string()` since string literals are just slices
 
 #[test]
 fn identifier_parser() {
-	assert_eq!(Ok(("", "a-b-c-d".to_string())), identifier("a-b-c-d"));
-	assert_eq!(Ok((" b-c-d", "a".to_string())), identifier("a b-c-d"));
-	assert_eq!(Err("!a-b-c-d"), identifier("!a-b-c-d"));
+    assert_eq!(Ok(("", "a-b-c-d".to_string())), identifier("a-b-c-d"));
+    assert_eq!(Ok((" b-c-d", "a".to_string())), identifier("a b-c-d"));
+    assert_eq!(Err("!a-b-c-d"), identifier("!a-b-c-d"));
+}
+
+// given f and g, returns (f o g)
+
+fn pair<P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Fn(&str) -> Result<(&str, (R1, R2)), &str>
+where
+    P1: Fn(&str) -> Result<(&str, R1), &str>,
+    P2: Fn(&str) -> Result<(&str, R2), &str>,
+{
+    move |input| match parser1(input) {
+        Ok((next_input, result1)) => match parser2(next_input) {
+            Ok((final_input, result2)) => Ok((final_input, (result1, result2))),
+            Err(err) => Err(err),
+        },
+        Err(err) => Err(err),
+    }
+}
+
+// ｶｯｺｲｲ
+
+#[test]
+fn pair_combinator() {
+    let tag_opener = pair(match_literal("<"), identifier);
+	assert_eq!(Ok(("/>", ((), "br".to_string()))), tag_opener("<br/>"));
+	assert_eq!(Err("oh no"), tag_opener("oh no"));
+	assert_eq!(Err("!-- I'm just a comment! -->"), tag_opener("<!-- I'm just a comment! -->"));
 }
