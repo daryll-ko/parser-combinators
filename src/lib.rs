@@ -111,7 +111,18 @@ where
 #[test]
 fn pair_combinator() {
     let tag_opener = pair(match_literal("<"), identifier);
-	assert_eq!(Ok(("/>", ((), "br".to_string()))), tag_opener("<br/>"));
-	assert_eq!(Err("oh no"), tag_opener("oh no"));
-	assert_eq!(Err("!-- I'm just a comment! -->"), tag_opener("<!-- I'm just a comment! -->"));
+    assert_eq!(Ok(("/>", ((), "br".to_string()))), tag_opener("<br/>"));
+    assert_eq!(Err("oh no"), tag_opener("oh no"));
+    assert_eq!(
+        Err("!-- I'm just a comment! -->"),
+        tag_opener("<!-- I'm just a comment! -->")
+    );
+}
+
+fn map<P, F, A, B>(parser: P, map_fn: F) -> impl Fn(&str) -> Result<(&str, B), &str>
+where
+    P: Fn(&str) -> Result<(&str, A), &str>,
+    F: Fn(A) -> B,
+{
+    move |input| parser(input).map(|(next_input, result)| (next_input, map_fn(result)))
 }
